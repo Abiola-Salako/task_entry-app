@@ -1,19 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:task_entry/task.dart';
 
-class TaskEntryApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Task Entry App',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: TaskHomePage(),
-    );
-  }
-}
-
 class TaskHomePage extends StatefulWidget {
   @override
   _TaskHomePageState createState() => _TaskHomePageState();
@@ -25,6 +12,7 @@ class _TaskHomePageState extends State<TaskHomePage> with TaskNotifier {
   DateTime? _selectedDate;
   Priority _selectedPriority = Priority.Low;
   final List<Task> _tasks = [];
+  bool _selectionMode = false;
 
   void _addTask() {
     if (_titleController.text.isNotEmpty && _selectedDate != null) {
@@ -53,6 +41,19 @@ class _TaskHomePageState extends State<TaskHomePage> with TaskNotifier {
     });
   }
 
+  void _deleteTask(int index) {
+    setState(() {
+      _tasks.removeAt(index);
+    });
+  }
+
+  void _deleteSelectedTasks() {
+    setState(() {
+      _tasks.removeWhere((task) => task.isSelected);
+      _selectionMode = false;
+    });
+  }
+
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -66,11 +67,34 @@ class _TaskHomePageState extends State<TaskHomePage> with TaskNotifier {
       });
   }
 
+  void _toggleSelectionMode() {
+    setState(() {
+      _selectionMode = !_selectionMode;
+    });
+  }
+
+  void _selectTask(int index) {
+    setState(() {
+      _tasks[index].isSelected = !_tasks[index].isSelected;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Task Entry App'),
+        title: Text('Task Entry App'),
+        actions: [
+          if (_selectionMode)
+            IconButton(
+              icon: Icon(Icons.delete),
+              onPressed: _deleteSelectedTasks,
+            ),
+          IconButton(
+            icon: Icon(_selectionMode ? Icons.close : Icons.select_all),
+            onPressed: _toggleSelectionMode,
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -115,33 +139,55 @@ class _TaskHomePageState extends State<TaskHomePage> with TaskNotifier {
                 );
               }).toList(),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             ElevatedButton(
               onPressed: _addTask,
-              child: Text('Add Task'),
+              child: const Text('Add Task'),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Expanded(
               child: ListView.builder(
                 itemCount: _tasks.length,
                 itemBuilder: (context, index) {
-                  return ListTile(
-                    title: Text(
-                      _tasks[index].title,
-                      style: TextStyle(
-                        decoration: _tasks[index].isCompleted
-                            ? TextDecoration.lineThrough
-                            : TextDecoration.none,
+                  return GestureDetector(
+                    onLongPress: () => _selectTask(index),
+                    child: Dismissible(
+                      key: Key(_tasks[index].title),
+                      onDismissed: (direction) {
+                        _deleteTask(index);
+                      },
+                      background: Container(
+                        color: Colors.red,
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: const Icon(Icons.delete, color: Colors.white),
                       ),
-                    ),
-                    subtitle: Text(_tasks[index].description),
-                    trailing: IconButton(
-                      icon: Icon(
-                        _tasks[index].isCompleted
-                            ? Icons.check_circle
-                            : Icons.radio_button_unchecked,
+                      child: ListTile(
+                        title: Text(
+                          _tasks[index].title,
+                          style: TextStyle(
+                            decoration: _tasks[index].isCompleted
+                                ? TextDecoration.lineThrough
+                                : TextDecoration.none,
+                          ),
+                        ),
+                        subtitle: Text(_tasks[index].description),
+                        trailing: _selectionMode
+                            ? Checkbox(
+                                value: _tasks[index].isSelected,
+                                onChanged: (bool? value) {
+                                  _selectTask(index);
+                                },
+                              )
+                            : IconButton(
+                                icon: Icon(
+                                  _tasks[index].isCompleted
+                                      ? Icons.check_circle
+                                      : Icons.radio_button_unchecked,
+                                ),
+                                onPressed: () => _completeTask(index),
+                              ),
                       ),
-                      onPressed: () => _completeTask(index),
                     ),
                   );
                 },

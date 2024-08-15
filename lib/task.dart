@@ -3,11 +3,13 @@ enum Priority { High, Medium, Low }
 
 // Task class with basic properties
 class Task {
+
   final String title;
   final String description;
   final DateTime dueDate;
   final Priority priority;
   bool isCompleted = false;
+  bool isSelected = false;
 
   Task({
     required this.title,
@@ -16,6 +18,7 @@ class Task {
     required this.priority,
   });
 }
+
 // TimedTask subclass, future time-related functionalities can be added here
 class TimedTask extends Task {
   TimedTask({
